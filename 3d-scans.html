@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Scans - 3D Model Viewer</title>
+    <link rel="icon" href="assets/images/FAVI.png" type="image/png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <style>
+        :root {
+            --primary-color: #E41616;
+            --secondary-color: #2ecc71;
+            --accent-color: #e74c3c;
+            --dark-color: #2c3e50;
+            --light-color: #ecf0f1;
+        }
+        
+        body {
+            padding-top: 80px;
+        }
+        
+        .page-header {
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('assets/images/hero-bg.jpg');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            padding: 60px 0;
+            margin-bottom: 50px;
+            text-align: center;
+        }
+        
+        .page-header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+        
+        .page-header p {
+            font-size: 1.2rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        
+        .model-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin-bottom: 30px;
+            height: 100%;
+            border: none;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .model-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .model-card .card-img-top {
+            height: 250px;
+            object-fit: cover;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .model-card .card-body {
+            padding: 1.5rem;
+        }
+        
+        .model-card .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--dark-color);
+        }
+        
+        .model-card .card-text {
+            color: #666;
+            margin-bottom: 1.25rem;
+            min-height: 48px;
+        }
+        
+        .model-info {
+            background-color: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 1.25rem;
+        }
+        
+        .model-info small {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            padding: 0.5rem 1.5rem;
+            font-weight: 500;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            background-color: #c41414;
+            border-color: #c41414;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(228, 22, 22, 0.3);
+        }
+        
+        .nav-link.active {
+            color: var(--primary-color) !important;
+            font-weight: 600;
+        }
+        
+        .navbar {
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .footer {
+            background-color: var(--dark-color);
+            color: white;
+            padding: 30px 0;
+            margin-top: 50px;
+        }
+        
+        .section-title {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+            padding-bottom: 15px;
+        }
+        
+        .section-title:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 3px;
+            background-color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container">
+            <img src="assets/images/logo.png" class="navbar-brand" height="50px" width="100px" alt="3D Model Viewer Logo">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="3d-scans.html">3D Scans</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="vr-projects.html">VR Projects</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <header class="page-header">
+        <div class="container">
+            <h1>3D Scans</h1>
+            <p>Explore our collection of high-quality 3D scanned models. Click on any model to view it in our interactive 3D viewer.</p>
+        </div>
+    </header>
+
+    <!-- Models Section -->
+    <section class="models-section py-5">
+        <div class="container">
+            <h2 class="section-title">Available Models</h2>
+            <div class="row" id="models-container">
+                <!-- Room Model -->
+                <div class="col-lg-6 col-md-6 mb-4">
+                    <div class="card model-card">
+                        <img src="assets/models/room/textures/image.png" class="card-img-top" alt="Room Model Preview">
+                        <div class="card-body">
+                            <h5 class="card-title">Modern Room</h5>
+                            <p class="card-text">A detailed 3D scan of a contemporary living room with modern furniture and elegant design elements.</p>
+                            <div class="model-info">
+                                <small class="text-muted"><i class="fas fa-file-alt me-2"></i>Format: OBJ/MTL</small>
+                                <small class="text-muted"><i class="fas fa-weight-hanging me-2"></i>Size: 18MB</small>
+                                <small class="text-muted"><i class="fas fa-calendar-alt me-2"></i>Added: April 1, 2024</small>
+                            </div>
+                            <a href="viewer.html?model=room" class="btn btn-primary w-100">
+                                <i class="fas fa-cube me-2"></i>View Model
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kitchen Model -->
+                <div class="col-lg-6 col-md-6 mb-4">
+                    <div class="card model-card">
+                        <img src="assets/models/kitchen/textures/kitchen.png" class="card-img-top" alt="Kitchen Model Preview">
+                        <div class="card-body">
+                            <h5 class="card-title">Modern Kitchen</h5>
+                            <p class="card-text">High-resolution scan of a contemporary kitchen with detailed appliances and modern design features.</p>
+                            <div class="model-info">
+                                <small class="text-muted"><i class="fas fa-file-alt me-2"></i>Format: OBJ/MTL</small>
+                                <small class="text-muted"><i class="fas fa-weight-hanging me-2"></i>Size: 22MB</small>
+                                <small class="text-muted"><i class="fas fa-calendar-alt me-2"></i>Added: April 1, 2024</small>
+                            </div>
+                            <a href="viewer.html?model=kitchen" class="btn btn-primary w-100">
+                                <i class="fas fa-cube me-2"></i>View Model
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6 text-center text-md-start">
+                    <p class="mb-0">&copy; 2025 3D Model Viewer. All rights reserved.</p>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <a href="#" class="text-white me-3"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" class="text-white me-3"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="text-white me-3"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="text-white"><i class="fab fa-linkedin-in"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/auth.js"></script>
+</body>
+</html>

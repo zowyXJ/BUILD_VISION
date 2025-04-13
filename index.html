@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - Build Vision</title>
+    <link rel="icon" href="assets/images/FAVI.png" type="image/png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <style>
+        :root {
+            --primary-color: #E41616;
+            --secondary-color: #2ecc71;
+            --accent-color: #e74c3c;
+            --dark-color: #2c3e50;
+            --light-color: #ecf0f1;
+        }
+        
+        .hero-section {
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('assets/images/hero-bg.jpg');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            padding: 100px 0;
+            margin-bottom: 50px;
+        }
+        
+        .feature-card {
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+        }
+        
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+        
+        .stats-section {
+            background-color: var(--light-color);
+            padding: 50px 0;
+            margin: 50px 0;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: #c41414;
+            border-color: #c41414;
+        }
+        
+        .nav-link.active {
+            color: var(--primary-color) !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container">
+            <img src="assets/images/logo.png" class="navbar-brand" height="50px" width="100px" alt="3D Model Viewer Logo">
+            <!-- <a class="navbar-brand" href="#">3D Model Viewer</a> -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="index.html">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="3d-scans.html">3D Scans</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="vr-projects.html">VR Projects</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container text-center">
+            <h1 class="display-4 mb-4">Welcome to Build Vision</h1>
+            <p class="lead mb-4">Explore immersive 3D models and VR experiences in stunning detail</p>
+            <a href="#features" class="btn btn-primary btn-lg">Get Started</a>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 stat-item">
+                    <div class="stat-number">1000+</div>
+                    <div class="stat-label">3D Models</div>
+                </div>
+                <div class="col-md-4 stat-item">
+                    <div class="stat-number">500+</div>
+                    <div class="stat-label">VR Projects</div>
+                </div>
+                <div class="col-md-4 stat-item">
+                    <div class="stat-number">50K+</div>
+                    <div class="stat-label">Active Users</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="container mb-5">
+        <h2 class="text-center mb-5">Explore Our Features</h2>
+        <div class="row">
+            <!-- 3D Scans Card -->
+            <div class="col-md-6 mb-4">
+                <div class="card feature-card shadow-sm h-100">
+                    <!-- <img src="assets/models/textures/image.png" class="card-img-top" alt="3D Scans"> -->
+                    <div class="card-body text-center">
+                        <i class="fas fa-cube feature-icon"></i>
+                        <h5 class="card-title">3D Scans</h5>
+                        <p class="card-text">Experience high-quality 3D scans with interactive controls and detailed textures.</p>
+                        <a href="3d-scans.html" class="btn btn-primary">View 3D Scans</a>
+                    </div>
+                </div>
+            </div>
+            <!-- VR Projects Card -->
+            <div class="col-md-6 mb-4">
+                <div class="card feature-card shadow-sm h-100">
+                    <!-- <img src="assets/models/textures/image2.png" class="card-img-top" alt="VR Projects"> -->
+                    <div class="card-body text-center">
+                        <i class="fas fa-vr-cardboard feature-icon"></i>
+                        <h5 class="card-title">VR Projects</h5>
+                        <p class="card-text">Immerse yourself in virtual reality experiences with our cutting-edge VR projects.</p>
+                        <a href="vr-projects.html" class="btn btn-primary">Explore VR Projects</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <h5>About Us</h5>
+                    <p>Leading platform for 3D model viewing and VR experiences.</p>
+                </div>
+                <div class="col-md-4">
+                    <h5>Quick Links</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="3d-scans.html" class="text-white">3D Scans</a></li>
+                        <li><a href="vr-projects.html" class="text-white">VR Projects</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h5>Contact</h5>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-envelope"></i> contact@hz173@live.ac.uk</li>
+                        <li><i class="fas fa-phone"></i> +971 552676584</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="text-center mt-4">
+                <p class="mb-0">&copy; 2025 Build Vision. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Authentication Script -->
+    <script src="assets/js/auth.js"></script>
+</body>
+</html>

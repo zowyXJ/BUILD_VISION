@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viewer - 3D Model Viewer</title>
+    <link rel="icon" href="assets/images/FAVI.png" type="image/png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.159.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.159.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+        import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let modelPath = urlParams.get("model");
+            
+            // If no model specified, use default
+            if (!modelPath) {
+                modelPath = 'room';
+            }
+            
+            let scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
+            
+            let camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            let renderer = new THREE.WebGLRenderer({ 
+                canvas: document.getElementById("viewerCanvas"),
+                antialias: true 
+            });
+            
+            renderer.setSize(window.innerWidth * 0.8, window.innerHeight * 0.6);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            
+            const controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.screenSpacePanning = false;
+            controls.minDistance = 1;
+            controls.maxDistance = 50;
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 5, 5);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+            
+            const backLight = new THREE.DirectionalLight(0xffffff, 0.4);
+            backLight.position.set(-5, 5, -5);
+            scene.add(backLight);
+            
+            const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.5);
+            scene.add(hemisphereLight);
+            
+            const loadingOverlay = document.querySelector('.loading-overlay');
+            const modelStats = document.getElementById('modelStats');
+            
+            // Function to show error message
+            function showErrorMessage(message) {
+                console.error(message);
+                modelStats.innerHTML = `
+                    <p class="text-danger"><strong>Error:</strong> ${message}</p>
+                    <p>Please try selecting a different model or check if the model files exist.</p>
+                `;
+                loadingOverlay.style.display = 'none';
+            }
+            
+            // Function to load a model
+            function loadModel(modelName) {
+                console.log(`Loading model: ${modelName}`);
+                
+                // Clear existing model
+                scene.children.forEach(child => {
+                    if (child instanceof THREE.Mesh || child instanceof THREE.Group) {
+                        scene.remove(child);
+                    }
+                });
+                
+                // Show loading overlay
+                loadingOverlay.style.display = 'flex';
+                
+                // Determine file paths - using relative paths
+                const basePath = `./assets/models/${modelName}/`;
+                
+                // Check for both model-specific filenames and generic filenames
+                const possibleMtlFiles = [`${modelName}.mtl`, 'model.mtl'];
+                const possibleObjFiles = [`${modelName}.obj`, 'model.obj'];
+                
+                console.log(`Base path: ${basePath}`);
+                console.log(`Possible MTL files: ${possibleMtlFiles.join(', ')}`);
+                console.log(`Possible OBJ files: ${possibleObjFiles.join(', ')}`);
+                
+                // Try loading with the first MTL and OBJ file combination
+                tryLoadModel(possibleMtlFiles[0], possibleObjFiles[0], basePath, possibleMtlFiles, possibleObjFiles, modelName);
+            }
+            
+            // Function to try loading with a specific MTL and OBJ file
+            function tryLoadModel(mtlFile, objFile, basePath, possibleMtlFiles, possibleObjFiles, modelName) {
+                console.log(`Trying to load: ${basePath}${mtlFile} and ${basePath}${objFile}`);
+                
+                // Load MTL first
+                const mtlLoader = new MTLLoader();
+                mtlLoader.setPath(basePath);
+                
+                mtlLoader.load(mtlFile, 
+                    // MTL loaded successfully
+                    (materials) => {
+                        console.log('Materials loaded successfully');
+                        materials.preload();
+                        
+                        // Process materials - fix for materials.materials.forEach error
+                        // Check if materials is an object with a materials property
+                        if (materials.materials) {
+                            // Convert materials object to array if needed
+                            const materialsArray = Array.isArray(materials.materials) 
+                                ? materials.materials 
+                                : Object.values(materials.materials);
+                            
+                            materialsArray.forEach(material => {
+                                // Enable shadows
+                                material.side = THREE.DoubleSide;
+                                material.shadowSide = THREE.DoubleSide;
+                                
+                                // If there's a texture map
+                                if (material.map) {
+                                    // Check if material.map.image exists before accessing src
+                                    if (material.map.image && material.map.image.src) {
+                                        // Extract just the filename from the full path
+                                        const textureFilename = material.map.image.src.split('/').pop();
+                                        // Set the new path relative to the MTL file
+                                        material.map.image.src = `${basePath}textures/${textureFilename}`;
+                                        
+                                        // Set texture properties
+                                        material.map.encoding = THREE.sRGBEncoding;
+                                        material.map.wrapS = THREE.RepeatWrapping;
+                                        material.map.wrapT = THREE.RepeatWrapping;
+                                        material.map.needsUpdate = true;
+                                    } else {
+                                        console.warn('Material has map but no image or src property:', material);
+                                        
+                                        // Try to load the texture manually
+                                        const textureLoader = new THREE.TextureLoader();
+                                        const textureName = material.name + '.jpg'; // Assume jpg format
+                                        
+                                        textureLoader.load(
+                                            `${basePath}textures/${textureName}`,
+                                            (texture) => {
+                                                console.log(`Successfully loaded texture for ${material.name}`);
+                                                material.map = texture;
+                                                material.map.encoding = THREE.sRGBEncoding;
+                                                material.map.wrapS = THREE.RepeatWrapping;
+                                                material.map.wrapT = THREE.RepeatWrapping;
+                                                material.map.needsUpdate = true;
+                                                material.needsUpdate = true;
+                                            },
+                                            undefined,
+                                            (error) => {
+                                                console.warn(`Failed to load texture for ${material.name}:`, error);
+                                                // Try with png extension
+                                                textureLoader.load(
+                                                    `${basePath}textures/${material.name}.png`,
+                                                    (texture) => {
+                                                        console.log(`Successfully loaded PNG texture for ${material.name}`);
+                                                        material.map = texture;
+                                                        material.map.encoding = THREE.sRGBEncoding;
+                                                        material.map.wrapS = THREE.RepeatWrapping;
+                                                        material.map.wrapT = THREE.RepeatWrapping;
+                                                        material.map.needsUpdate = true;
+                                                        material.needsUpdate = true;
+                                                    },
+                                                    undefined,
+                                                    (error) => {
+                                                        console.warn(`Failed to load PNG texture for ${material.name}:`, error);
+                                                    }
+                                                );
+                                            }
+                                        );
+                                    }
+                                }
+                                
+                                // Set material properties for better visibility
+                                material.roughness = 0.5;
+                                material.metalness = 0.2;
+                                material.envMapIntensity = 1.0;
+                                material.needsUpdate = true;
+                            });
+                        } else {
+                            console.warn('Materials object does not have expected structure:', materials);
+                        }
+                        
+                        // Now load the OBJ with the materials
+                        const objLoader = new OBJLoader();
+                        objLoader.setMaterials(materials);
+                        objLoader.setPath(basePath);
+                        
+                        objLoader.load(objFile,
+                            // OBJ loaded successfully
+                            (object) => {
+                                console.log('Model loaded successfully');
+                                
+                                // Enable shadows for all meshes
+                                object.traverse((child) => {
+                                    if (child instanceof THREE.Mesh) {
+                                        child.castShadow = true;
+                                        child.receiveShadow = true;
+                                    }
+                                });
+                                
+                                scene.add(object);
+                                
+                                // Center and scale the model
+                                const box = new THREE.Box3().setFromObject(object);
+                                const center = box.getCenter(new THREE.Vector3());
+                                const size = box.getSize(new THREE.Vector3());
+                                
+                                object.position.sub(center);
+                                
+                                const maxDim = Math.max(size.x, size.y, size.z);
+                                const scale = 5 / maxDim;
+                                object.scale.multiplyScalar(scale);
+                                
+                                // Update camera position for better view
+                                const distance = maxDim * 2;
+                                camera.position.set(distance, distance * 0.5, distance);
+                                camera.lookAt(0, 0, 0);
+                                
+                                // Update controls
+                                controls.target.set(0, 0, 0);
+                                controls.update();
+                                
+                                // Update model info
+                                updateModelInfo(object, modelName);
+                                
+                                loadingOverlay.style.display = 'none';
+                            },
+                            // Progress
+                            (xhr) => {
+                                const percent = (xhr.loaded / xhr.total * 100);
+                                console.log(`${percent.toFixed(2)}% loaded`);
+                                document.getElementById('loading-progress').textContent = `${percent.toFixed(0)}%`;
+                            },
+                            // Error
+                            (error) => {
+                                console.error(`Error loading OBJ (${objFile}):`, error);
+                                // Try next file combination or show error
+                                if (possibleMtlFiles.indexOf(mtlFile) < possibleMtlFiles.length - 1 || 
+                                    possibleObjFiles.indexOf(objFile) < possibleObjFiles.length - 1) {
+                                    // Try next combination
+                                    const nextMtlIndex = possibleMtlFiles.indexOf(mtlFile);
+                                    const nextObjIndex = possibleObjFiles.indexOf(objFile);
+                                    
+                                    if (nextMtlIndex < possibleMtlFiles.length - 1) {
+                                        tryLoadModel(possibleMtlFiles[nextMtlIndex + 1], objFile, basePath, possibleMtlFiles, possibleObjFiles, modelName);
+                                    } else if (nextObjIndex < possibleObjFiles.length - 1) {
+                                        tryLoadModel(possibleMtlFiles[0], possibleObjFiles[nextObjIndex + 1], basePath, possibleMtlFiles, possibleObjFiles, modelName);
+                                    }
+                                } else {
+                                    // Try loading OBJ without materials
+                                    tryLoadObjWithoutMaterials(objFile, basePath, possibleObjFiles, modelName);
+                                }
+                            }
+                        );
+                    },
+                    // Progress
+                    (xhr) => {
+                        const percent = (xhr.loaded / xhr.total * 100);
+                        console.log(`${percent.toFixed(2)}% materials loaded`);
+                    },
+                    // Error
+                    (error) => {
+                        console.error(`Error loading materials (${mtlFile}):`, error);
+                        // Try next MTL file or load OBJ without materials
+                        if (possibleMtlFiles.indexOf(mtlFile) < possibleMtlFiles.length - 1) {
+                            tryLoadModel(possibleMtlFiles[possibleMtlFiles.indexOf(mtlFile) + 1], objFile, basePath, possibleMtlFiles, possibleObjFiles, modelName);
+                        } else {
+                            // Try loading OBJ without materials
+                            tryLoadObjWithoutMaterials(objFile, basePath, possibleObjFiles, modelName);
+                        }
+                    }
+                );
+            }
+            
+            // Function to try loading OBJ without materials
+            function tryLoadObjWithoutMaterials(objFile, basePath, possibleObjFiles, modelName) {
+                console.log(`Trying to load OBJ without materials: ${basePath}${objFile}`);
+                
+                const objLoader = new OBJLoader();
+                objLoader.setPath(basePath);
+                
+                // Create a basic material for the model
+                const defaultMaterial = new THREE.MeshStandardMaterial({
+                    color: 0xcccccc,
+                    side: THREE.DoubleSide
+                });
+                
+                objLoader.load(objFile,
+                    // OBJ loaded successfully
+                    (object) => {
+                        console.log('Model loaded without materials:', object);
+                        
+                        // Apply default material to all meshes
+                        object.traverse((child) => {
+                            if (child instanceof THREE.Mesh) {
+                                child.material = defaultMaterial;
+                                child.castShadow = true;
+                                child.receiveShadow = true;
+                            }
+                        });
+                        
+                        scene.add(object);
+                        
+                        // Center and scale the model
+                        const box = new THREE.Box3().setFromObject(object);
+                        const center = box.getCenter(new THREE.Vector3());
+                        const size = box.getSize(new THREE.Vector3());
+                        
+                        object.position.sub(center);
+                        
+                        const maxDim = Math.max(size.x, size.y, size.z);
+                        const scale = 5 / maxDim;
+                        object.scale.multiplyScalar(scale);
+                        
+                        // Update camera position for better view
+                        const distance = maxDim * 2;
+                        camera.position.set(distance, distance * 0.5, distance);
+                        camera.lookAt(0, 0, 0);
+                        
+                        // Update controls
+                        controls.target.set(0, 0, 0);
+                        controls.update();
+                        
+                        // Update model info
+                        updateModelInfo(object, modelName);
+                        
+                        loadingOverlay.style.display = 'none';
+                    },
+                    // Progress
+                    (xhr) => {
+                        const percent = (xhr.loaded / xhr.total * 100);
+                        console.log(`${percent.toFixed(2)}% loaded`);
+                        document.getElementById('loading-progress').textContent = `${percent.toFixed(0)}%`;
+                    },
+                    // Error
+                    (error) => {
+                        console.error(`Error loading OBJ without materials (${objFile}):`, error);
+                        // Try next OBJ file or show error
+                        if (possibleObjFiles.indexOf(objFile) < possibleObjFiles.length - 1) {
+                            tryLoadObjWithoutMaterials(possibleObjFiles[possibleObjFiles.indexOf(objFile) + 1], basePath, possibleObjFiles, modelName);
+                        } else {
+                            showErrorMessage('Failed to load model. Please check if the model files exist and are accessible.');
+                        }
+                    }
+                );
+            }
+            
+            // Function to update model information
+            function updateModelInfo(object, modelName) {
+                let vertexCount = 0;
+                let faceCount = 0;
+                const box = new THREE.Box3().setFromObject(object);
+                const size = box.getSize(new THREE.Vector3());
+                
+                object.traverse((child) => {
+                    if (child instanceof THREE.Mesh) {
+                        vertexCount += child.geometry.attributes.position.count;
+                        faceCount += child.geometry.index ? child.geometry.index.count / 3 : child.geometry.attributes.position.count / 3;
+                    }
+                });
+                
+                modelStats.innerHTML = `
+                    <p><strong>Model:</strong> ${modelName}</p>
+                    <p><strong>Vertices:</strong> ${vertexCount}</p>
+                    <p><strong>Faces:</strong> ${faceCount}</p>
+                    <p><strong>Size:</strong> ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}</p>
+                `;
+            }
+            
+            // Controls
+            document.getElementById('cameraDistance').addEventListener('input', function(e) {
+                const distance = parseFloat(e.target.value);
+                const direction = camera.position.clone().normalize();
+                camera.position.copy(direction.multiplyScalar(distance));
+            });
+            
+            document.getElementById('rotationSpeed').addEventListener('input', function(e) {
+                controls.autoRotateSpeed = parseFloat(e.target.value) * 5;
+            });
+            
+            document.getElementById('resetView').addEventListener('click', function() {
+                controls.reset();
+            });
+            
+            let wireframeMode = false;
+            document.getElementById('toggleWireframe').addEventListener('click', function() {
+                wireframeMode = !wireframeMode;
+                scene.traverse(function(child) {
+                    if (child instanceof THREE.Mesh) {
+                        child.material.wireframe = wireframeMode;
+                    }
+                });
+                this.classList.toggle('active');
+            });
+            
+            document.getElementById('toggleAutoRotate').addEventListener('click', function() {
+                controls.autoRotate = !controls.autoRotate;
+                this.classList.toggle('active');
+            });
+            
+            document.getElementById('toggleFullscreen').addEventListener('click', function() {
+                const container = document.getElementById('viewer-container');
+                if (!document.fullscreenElement) {
+                    container.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            });
+            
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                const container = document.getElementById('viewer-container');
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+                
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+                
+                renderer.setSize(width, height);
+            });
+            
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            animate();
+            
+            // Load initial model
+            loadModel(modelPath);
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #E41616;
+            --secondary-color: #2ecc71;
+            --accent-color: #e74c3c;
+            --dark-color: #2c3e50;
+            --light-color: #ecf0f1;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            padding-top: 80px;
+        }
+        
+        #viewer-container {
+            position: relative;
+            width: 100%;
+            height: 70vh;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        #viewerCanvas {
+            width: 100%;
+            height: 100%;
+        }
+        .controls-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+        .view-controls {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .control-btn {
+            margin: 5px;
+            padding: 8px 15px;
+            border-radius: 5px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .control-btn:hover {
+            background: #e9ecef;
+        }
+        .control-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        .model-info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        .model-selector {
+            margin-bottom: 20px;
+        }
+        .form-select {
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .form-select:focus {
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+        }
+        .form-range::-webkit-slider-thumb {
+            background: var(--primary-color);
+        }
+        .form-range::-moz-range-thumb {
+            background: var(--primary-color);
+        }
+        .navbar {
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .nav-link.active {
+            color: var(--primary-color) !important;
+            font-weight: 600;
+        }
+        .container {
+            max-width: 1200px;
+        }
+        h1 {
+            color: var(--dark-color);
+            font-weight: 600;
+        }
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            padding: 0.5rem 1.5rem;
+            font-weight: 500;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            background-color: #c41414;
+            border-color: #c41414;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(228, 22, 22, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container">
+            <img src="assets/images/logo.png" class="navbar-brand" height="50px" width="100px" alt="3D Model Viewer Logo">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="3d-scans.html">3D Scans</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="vr-projects.html">VR Projects</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container" style="margin-top: 100px;">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="text-center mb-4">3D Model Viewer</h1>
+                
+                <div id="viewer-container" class="border shadow p-3 mb-5 bg-white rounded">
+                    <div class="loading-overlay">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <div id="loading-progress" class="mt-2">0%</div>
+                    </div>
+                    <canvas id="viewerCanvas"></canvas>
+                    <div class="controls-panel">
+                        <div class="mb-3">
+                            <label class="form-label">Camera Distance</label>
+                            <input type="range" class="form-range" id="cameraDistance" min="1" max="20" value="10">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Rotation Speed</label>
+                            <input type="range" class="form-range" id="rotationSpeed" min="0" max="2" step="0.1" value="0">
+                        </div>
+                    </div>
+                    <div class="model-info">
+                        <h5 class="mb-2">Model Information</h5>
+                        <div id="modelStats"></div>
+                    </div>
+                </div>
+                <div class="view-controls">
+                    <div class="d-flex justify-content-center flex-wrap">
+                        <button class="control-btn" id="resetView">
+                            <i class="fas fa-sync-alt"></i> Reset View
+                        </button>
+                        <button class="control-btn" id="toggleWireframe">
+                            <i class="fas fa-vector-square"></i> Wireframe
+                        </button>
+                        <button class="control-btn" id="toggleAutoRotate">
+                            <i class="fas fa-sync"></i> Auto Rotate
+                        </button>
+                        <button class="control-btn" id="toggleFullscreen">
+                            <i class="fas fa-expand"></i> Fullscreen
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+<script src="assets/js/auth.js"></script>
+
+</html>
